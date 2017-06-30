@@ -42,6 +42,10 @@ These commands always use the current AWS credentials and the stack name from th
 * ``outputs``: Get the full list of outputs
 * ``parameters``: Get the full list of parameters
 
+Optional parameters:
+* ``--configuration=./config/MyStack.yml``: Specify 'MyConfig.yml' as configuration file ('brume.yml' per default).  All path will be resolved from configuration file directory.
+
+
 The ``brume.yml`` file
 ----------------------
 

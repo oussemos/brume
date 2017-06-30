@@ -8,23 +8,28 @@ from config import Config
 from stack import Stack
 from template import Template
 from assets import send_assets
-conf = Config.load('brume.yml')
-templates_config = conf['templates']
-cf_config = conf['stack']
 
+conf = {}
+templates_config = {}
+cf_config = {}
+current_path = None
 
 def process_assets():
+    global conf
+    global current_path
     if ('assets' in conf):
         assetsConfig = conf['assets']
         local_path = assetsConfig['local_path']
         s3_bucket = assetsConfig['s3_bucket']
         s3_path = assetsConfig['s3_path']
-        click.echo("Processing assets from {} to s3://{}/{}".format(local_path, s3_bucket, s3_path))
+        click.echo("Processing assets from {} to s3://{}/{}".format(path.join(current_path, local_path), s3_bucket, s3_path))
         send_assets(local_path, s3_bucket , s3_path)
 
 def collect_templates():
     """Convert every .cform template into a Template."""
-    templates = glob(path.join(templates_config.get('local_path', ''), '*.cform'))
+    global templates_config
+    global current_path
+    templates = glob(path.join(current_path, templates_config.get('local_path', ''), '*.cform'))
     return [Template(t, templates_config) for t in templates]
 
 
@@ -34,61 +39,63 @@ def validate_and_upload():
     map(lambda t: t.upload(), templates)
     process_assets()
 
+def newStack():
+    global cf_config
+    global current_path
+    return Stack(cf_config, current_path)
 
 @click.command()
 def config():
     """Print the current stack confguration."""
+    global conf
     print(dump(conf))
 
 
 @click.command()
 def create():
     """Create a new CloudFormation stack."""
-    stack = Stack(cf_config)
     validate_and_upload()
-    stack.create()
+    newStack().create()
 
 
 @click.command()
 def update():
     """Update an existing CloudFormation stack."""
-    stack = Stack(cf_config)
     validate_and_upload()
-    stack.update()
+    newStack().update()
 
 
 @click.command()
 def deploy():
     """Create or update a CloudFormation stack."""
-    stack = Stack(cf_config)
     validate_and_upload()
-    stack.create_or_update()
+    newStack().create_or_update()
 
 
 @click.command()
 def delete():
     """Delete a CloudFormation stack."""
-    stack = Stack(cf_config)
-    stack.delete()
+    newStack().delete()
 
 
 @click.command()
 def status():
     """Get the status of a CloudFormation stack."""
-    Stack(cf_config).status()
+    newStack().status()
 
 
 @click.command()
 def outputs():
     """Get the full list of outputs of a CloudFormation stack."""
-    outputs = Stack(cf_config).outputs()
+    outputs = newStack().outputs()
     print dump(outputs, default_flow_style=False)
 
 
 @click.command()
 def parameters():
     """Get the full list of parameters of a CloudFormation stack."""
-    parameters = Stack(cf_config).params()
+    global cf_config
+    parameters = newStack().params()
     for stack_parameters in parameters:
         sp = parameters[stack_parameters]
         if not sp:
@@ -115,7 +122,16 @@ def upload():
 
 
 @click.group()
-def cli():
+@click.option('--configuration', default='brume.yml')
+def cli(configuration):
+    global conf
+    global templates_config
+    global cf_config
+    global current_path
+    conf = Config.load(configuration)
+    templates_config = conf['templates']
+    cf_config = conf['stack']
+    current_path = path.dirname(configuration)
     pass
 
 

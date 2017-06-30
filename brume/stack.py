@@ -45,9 +45,9 @@ class Stack():
     tags = {}
     on_failure = 'ROLLBACK'
 
-    def __init__(self, conf):
+    def __init__(self, conf, current_path):
         self.stack_name = conf['stack_name']
-        self.template_body = conf['template_body']
+        self.template_body = os.path.join(current_path, conf['template_body'])
         self.capabilities = conf.get('capabilities', self.capabilities)
         self.parameters = make_parameters(conf.get('parameters', self.parameters))
         self.tags = make_tags(conf['tags'])
