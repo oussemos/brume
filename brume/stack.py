@@ -37,6 +37,16 @@ def outputs_for(outputs, stack):
         else:
             raise e
 
+def stack_outputs(stack_name):
+    """Return stack outputs."""
+    outputs = {}
+    outputs_for(outputs, stack_name)
+    substacks = client.describe_stack_resources(StackName=stack_name)['StackResources']
+    for s in substacks:
+        outputs[s['LogicalResourceId']] = {}
+        outputs_for(outputs[s['LogicalResourceId']], s['PhysicalResourceId'])
+    return outputs
+
 
 class Stack():
     stack_name = None
@@ -70,13 +80,7 @@ class Stack():
         return stacks
 
     def outputs(self):
-        outputs = {}
-        outputs_for(outputs, self.stack_name)
-        substacks = client.describe_stack_resources(StackName=self.stack_name)['StackResources']
-        for s in substacks:
-            outputs[s['LogicalResourceId']] = {}
-            outputs_for(outputs[s['LogicalResourceId']], s['PhysicalResourceId'])
-        return outputs
+        return stack_outputs(self.stack_name)
 
     def params(self):
         parameters = {}
