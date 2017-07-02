@@ -9,12 +9,14 @@ from stack import Stack
 from template import Template
 from assets import send_assets
 
+# Brume Configuration
 conf = {}
 templates_config = {}
 cf_config = {}
 current_path = None
 
 def process_assets():
+    """Send assets if defined."""
     global conf
     global current_path
     if ('assets' in conf):
@@ -34,12 +36,14 @@ def collect_templates():
 
 
 def validate_and_upload():
+    """Validate templates and upload new stack configuration."""
     templates = collect_templates()
     map(lambda t: t.validate(), templates)
     map(lambda t: t.upload(), templates)
     process_assets()
 
 def newStack():
+    """Instanciante main Stack."""
     global cf_config
     global current_path
     return Stack(cf_config, current_path)
