@@ -21,13 +21,13 @@ class InvalidTemplateError(BaseException):
 class Template():
     key = None
 
-    def __init__(self, file, config):
+    def __init__(self, file, config, current_path):
         self.file = file
         self.s3_bucket = config['s3_bucket']
-        self.public_url = self.public_url(config)
+        self.public_url = self.public_url(config, current_path)
 
-    def public_url(self, config):
-        local_path = config.get('local_path', '')
+    def public_url(self, config, current_path):
+        local_path = os.path.join(current_path, config.get('local_path', '.'))
         if local_path != '.':
             file = self.file.replace(local_path, '')
         else:
