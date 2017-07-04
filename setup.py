@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name='brume',
-    version='0.0.12',
+    version='0.1.1',
     description='AWS Cloudformation deployer',
     long_description=read('README.rst'),
     url='https://github.com/flou/brume',
