@@ -41,6 +41,8 @@ def outputs_for(outputs, stack):
 def stack_outputs(stack_name):
     """Return stack outputs."""
     outputs = {}
+    outputs_for(outputs, stack_name)
+    ## TODO filter on stack arn
     substacks = client.describe_stack_resources(StackName=stack_name)['StackResources']
     outputs['Substacks'] = {}
     for s in substacks:
