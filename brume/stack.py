@@ -79,12 +79,6 @@ class Stack():
             Capabilities=self.capabilities,
             Tags=self.tags)
 
-    def get_stacks(self):
-        stacks = [self.stack_name]
-        substacks = client.describe_stack_resources(StackName=self.stack_name)['StackResources']
-        stacks.extend([s['PhysicalResourceId'] for s in substacks])
-        return stacks
-
     def outputs(self):
         return stack_outputs(self.stack_name)
 
@@ -124,8 +118,10 @@ class Stack():
             if 'No updates are to be performed.' in e.message:
                 click.secho('No updates are to be performed on stack [{}]'.format(self.stack_name), err=True, fg='red')
                 exit(1)
+            click.secho('Error {}'.format(e.message), err=True, fg='red')
+            exit(1)
         except Exception as e:
-             click.secho(e, err=True, fg='red')
+             click.secho('Error {}'.format(e.message), err=True, fg='red')
              exit(1)
 
     def create_or_update(self):
