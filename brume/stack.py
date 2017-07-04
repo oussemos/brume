@@ -24,13 +24,16 @@ def make_parameters(tags_list):
     return [{"ParameterKey": k, "ParameterValue": v} for k, v in tags_list.items()]
 
 
-def outputs_for(outputs, stack):
+def stack_walker(outputs, stack, collector):
     try:
         description = client.describe_stacks(StackName=stack)['Stacks'][0]
         stackName = description['StackName']
-        for o in description.get('Outputs', []):
-            outputs[o['OutputKey']] = o['OutputValue']
-        return stackName
+        collector(outputs, description)
+        substacks = [s for s in client.describe_stack_resources(StackName=stack)['StackResources'] if s['ResourceType'] == 'AWS::CloudFormation::Stack']
+        for s in substacks:
+            outputs[s['LogicalResourceId']] = {}
+            stack_walker(outputs[s['LogicalResourceId']], s['PhysicalResourceId'], collector)
+        return outputs
     except ClientError as e:
         if 'does not exist' in e.message:
             click.secho('Stack [{}] does not exist'.format(stack), err=True, fg='red')
@@ -38,18 +41,18 @@ def outputs_for(outputs, stack):
         else:
             raise e
 
+def output_collector(outputs, description):
+    for o in description.get('Outputs', []):
+        outputs[o['OutputKey']] = o['OutputValue']
+
+def param_collector(outputs, description):
+    for o in description.get('Parameters', []):
+        outputs[o['ParameterKey']] = o['ParameterValue']
+
+
 def stack_outputs(stack_name):
     """Return stack outputs."""
-    outputs = {}
-    outputs_for(outputs, stack_name)
-    ## TODO filter on stack arn
-    substacks = client.describe_stack_resources(StackName=stack_name)['StackResources']
-    outputs['Substacks'] = {}
-    for s in substacks:
-        outputs[s['LogicalResourceId']] = {}
-        outputs['Substacks'][s['LogicalResourceId']] = str(outputs_for(outputs[s['LogicalResourceId']], s['PhysicalResourceId']))
-    return outputs
-
+    return stack_walker({}, stack_name, output_collector)
 
 class Stack():
     stack_name = None
@@ -86,20 +89,7 @@ class Stack():
         return stack_outputs(self.stack_name)
 
     def params(self):
-        parameters = {}
-        try:
-            for stack in self.get_stacks():
-                parameters[stack] = {}
-                s_params = client.describe_stacks(StackName=stack)['Stacks'][0].get('Parameters', [])
-                for o in s_params:
-                    parameters[stack][o['ParameterKey']] = o['ParameterValue']
-            return parameters
-        except ClientError as e:
-            if 'does not exist' in e.message:
-                click.secho('Stack [{}] does not exist'.format(self.stack_name), err=True, fg='red')
-                exit(1)
-            else:
-                raise e
+        return stack_walker({}, self.stack_name, param_collector)
 
     @staticmethod
     def exists(stack_name):

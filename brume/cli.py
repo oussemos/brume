@@ -100,14 +100,7 @@ def parameters():
     """Get the full list of parameters of a CloudFormation stack."""
     global cf_config
     parameters = newStack().params()
-    for stack_parameters in parameters:
-        sp = parameters[stack_parameters]
-        if not sp:
-            continue
-        click.echo(stack_parameters)
-        for p in sp:
-            click.echo('\t{} = {}'.format(p, sp[p]))
-        click.echo()
+    print dump(parameters, default_flow_style=False)
 
 
 @click.command()
