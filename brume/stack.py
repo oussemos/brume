@@ -26,10 +26,11 @@ def make_parameters(tags_list):
 
 def outputs_for(outputs, stack):
     try:
-        s_outputs = client.describe_stacks(StackName=stack)['Stacks'][0].get('Outputs', [])
-        for o in s_outputs:
+        description = client.describe_stacks(StackName=stack)['Stacks'][0]
+        stackName = description['StackName']
+        for o in description.get('Outputs', []):
             outputs[o['OutputKey']] = o['OutputValue']
-        return outputs
+        return stackName
     except ClientError as e:
         if 'does not exist' in e.message:
             click.secho('Stack [{}] does not exist'.format(stack), err=True, fg='red')
@@ -40,11 +41,11 @@ def outputs_for(outputs, stack):
 def stack_outputs(stack_name):
     """Return stack outputs."""
     outputs = {}
-    outputs_for(outputs, stack_name)
     substacks = client.describe_stack_resources(StackName=stack_name)['StackResources']
+    outputs['Substacks'] = {}
     for s in substacks:
         outputs[s['LogicalResourceId']] = {}
-        outputs_for(outputs[s['LogicalResourceId']], s['PhysicalResourceId'])
+        outputs['Substacks'][s['LogicalResourceId']] = str(outputs_for(outputs[s['LogicalResourceId']], s['PhysicalResourceId']))
     return outputs
 
 
@@ -56,7 +57,7 @@ class Stack():
     on_failure = 'ROLLBACK'
 
     def __init__(self, conf, current_path):
-        self.stack_name = conf['stack_name']
+        self.stack_name = str(conf['stack_name'])
         self.template_body = os.path.join(current_path, conf['template_body'])
         self.capabilities = conf.get('capabilities', self.capabilities)
         self.parameters = make_parameters(conf.get('parameters', self.parameters))
@@ -122,7 +123,7 @@ class Stack():
     def update(self):
         click.echo('Updating stack {}'.format(self.stack_name))
         try:
-            client.update_stack(**self.stack_configuration)
+            response = client.update_stack(**self.stack_configuration)
             self.tail()
         except ClientError as e:
             if 'does not exist' in e.message:
@@ -131,6 +132,9 @@ class Stack():
             if 'No updates are to be performed.' in e.message:
                 click.secho('No updates are to be performed on stack [{}]'.format(self.stack_name), err=True, fg='red')
                 exit(1)
+        except Exception as e:
+             click.secho(e, err=True, fg='red')
+             exit(1)
 
     def create_or_update(self):
         click.echo('Deploying stack {}'.format(self.stack_name))
