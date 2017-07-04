@@ -32,7 +32,7 @@ def collect_templates():
     global templates_config
     global current_path
     templates = glob(path.join(current_path, templates_config.get('local_path', ''), '*.cform'))
-    return [Template(t, templates_config) for t in templates]
+    return [Template(t, templates_config, current_path) for t in templates]
 
 
 def validate_and_upload():
