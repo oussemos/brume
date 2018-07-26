@@ -1,6 +1,7 @@
 """Boto clients."""
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 
@@ -8,7 +9,12 @@ def boto_client(service, region=None):
     """
     Instanciate boto client for specified service and region
     """
-    return boto3.client(service, region_name=region)
+    config = Config(
+        retries=dict(
+            max_attempts=10
+        )
+    )
+    return boto3.client(service, region_name=region, config=config)
 
 
 def cfn_client(region):
